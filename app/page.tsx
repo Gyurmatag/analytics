@@ -65,7 +65,7 @@ export default function Component() {
       setSessionChartData(Object.entries(sessionCounts).map(([name, value]) => ({ name, value })))
 
       // Set latest events
-      setLatestEvents(filteredLogs.slice(0, 5))
+      setLatestEvents(filteredLogs)
     }
   }, [data, timeRange])
 
