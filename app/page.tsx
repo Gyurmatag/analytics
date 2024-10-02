@@ -1,101 +1,168 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+import { useState, useEffect } from 'react'
+import { init } from '@instantdb/react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { AlertCircle, Activity, Clock, Users } from 'lucide-react'
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+// Initialize InstantDB
+const APP_ID = 'c6c36100-8379-4433-b38f-b6e828574a39'
+
+type Schema = {
+  logs: Log
+}
+
+const db = init<Schema>({ appId: APP_ID })
+
+type Log = {
+  id: string
+  actionType: string
+  createdAt: number
+  elementId: string
+  elementType: string
+  userSessionId: string
+}
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d']
+
+export default function Component() {
+  const [timeRange, setTimeRange] = useState('1h')
+  const { isLoading, error, data } = db.useQuery({ logs: {} })
+
+  const [actionChartData, setActionChartData] = useState([])
+  const [sessionChartData, setSessionChartData] = useState([])
+  const [latestEvents, setLatestEvents] = useState<Log[]>([])
+
+  useEffect(() => {
+    if (data?.logs) {
+      const now = Date.now()
+      const filteredLogs = data.logs.filter((log: Log) => {
+        const logTime = new Date(log.createdAt).getTime()
+        if (timeRange === '1h') return now - logTime <= 3600000
+        if (timeRange === '24h') return now - logTime <= 86400000
+        return true // 'all' time range
+      })
+
+      // Prepare action chart data
+      const actionCounts = filteredLogs.reduce((acc: Record<string, number>, log: Log) => {
+        acc[log.actionType] = (acc[log.actionType] || 0) + 1
+        return acc
+      }, {})
+      setActionChartData(Object.entries(actionCounts).map(([name, value]) => ({ name, value })))
+
+      // Prepare session chart data
+      const sessionCounts = filteredLogs.reduce((acc: Record<string, number>, log: Log) => {
+        if (log.userSessionId) {
+          acc[log.userSessionId] = (acc[log.userSessionId] || 0) + 1
+        }
+        return acc
+      }, {})
+      setSessionChartData(Object.entries(sessionCounts).map(([name, value]) => ({ name, value })))
+
+      // Set latest events
+      setLatestEvents(filteredLogs.slice(0, 5))
+    }
+  }, [data, timeRange])
+
+  if (isLoading) {
+    return (
+        <div className="flex items-center justify-center h-screen bg-gray-100">
+          <div className="text-gray-600">Loading data...</div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    )
+  }
+
+  if (error) {
+    return (
+        <div className="flex items-center justify-center h-screen bg-gray-100">
+          <div className="text-red-500 flex items-center">
+            <AlertCircle className="mr-2" />
+            Error fetching data: {error.message}
+          </div>
+        </div>
+    )
+  }
+
+  return (
+      <div className="min-h-screen bg-gray-100 p-8">
+        <h1 className="text-3xl font-bold mb-8 text-gray-800">Real-time Analytics Dashboard</h1>
+
+        <div className="mb-4">
+          <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className="border rounded p-2"
+          >
+            <option value="1h">Last Hour</option>
+            <option value="24h">Last 24 Hours</option>
+            <option value="all">All Time</option>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Activity className="mr-2" />
+              Event Distribution
+            </h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={actionChartData}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Users className="mr-2" />
+              User Session Activity
+            </h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                    data={sessionChartData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    label
+                >
+                  {sessionChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md md:col-span-2">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Clock className="mr-2" />
+              Latest Events
+            </h2>
+            <ul className="space-y-4">
+              {latestEvents.map((event) => (
+                  <li key={event.id} className="border-b pb-2">
+                    <p className="font-medium">{event.actionType} on {event.elementType}</p>
+                    <p className="text-sm text-gray-500">
+                      Element ID: {event.elementId}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      User Session: {event.userSessionId || 'N/A'}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(event.createdAt).toLocaleString()}
+                    </p>
+                  </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+  )
 }
