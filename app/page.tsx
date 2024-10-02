@@ -64,8 +64,8 @@ export default function Component() {
       }, {})
       setSessionChartData(Object.entries(sessionCounts).map(([name, value]) => ({ name, value })))
 
-      // Set latest events
-      setLatestEvents(filteredLogs.slice(0, 5))
+      // Set latest 6 events
+      setLatestEvents(filteredLogs.slice(-6));
     }
   }, [data, timeRange])
 
@@ -148,7 +148,7 @@ export default function Component() {
           <div className="bg-white p-6 rounded-lg shadow-md md:col-span-2">
             <h2 className="text-xl font-semibold mb-4 flex items-center">
               <Clock className="mr-2" />
-              Latest Events
+              Latest 6 Events
             </h2>
             <ul className="space-y-4">
               {latestEvents.map((event) => (
